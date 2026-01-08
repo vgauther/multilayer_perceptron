@@ -3,17 +3,7 @@ import csv
 import numpy as np
 
 from mlp import MLP
-from ml_math import categorical_cross_entropy
-
-
-def binary_cross_entropy(y, p):
-    eps = 1e-15
-    p = np.clip(p, eps, 1 - eps)
-    return -(y * np.log(p) + (1 - y) * np.log(1 - p))
-
-
-def mean_squared_error(y, p):
-    return (y - p) ** 2
+from ml_math import categorical_cross_entropy, binary_cross_entropy, mean_squared_error
 
 
 def main():
