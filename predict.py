@@ -3,7 +3,11 @@
 """
 predict.py
 
-Script de prédiction avec le MLP entraîné
+- Recharge un modèle entraîné avec --layer
+- Architecture dynamique
+- Sigmoid → ReLU → Softmax
+- Affiche les prédictions
+- Calcule BCE et MSE globales
 """
 
 import argparse
@@ -14,15 +18,29 @@ from mlp import MLP
 from ml_math import binary_cross_entropy, mean_squared_error
 
 
+# =========================
+# MAIN
+# =========================
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("model")
-    parser.add_argument("dataset")
+    parser = argparse.ArgumentParser(description="MLP Prediction")
+    parser.add_argument("model", help="Fichier modèle (.npy)")
+    parser.add_argument("dataset", help="Dataset CSV")
     args = parser.parse_args()
 
-    mlp, mean, std, arch = MLP.load(args.model)
+    # =========================
+    # CHARGEMENT DU MODÈLE
+    # =========================
+    mlp, mean, std, architecture = MLP.load(args.model)
 
+    print("\n=== ARCHITECTURE DU MODÈLE ===")
+    print(" -> ".join(map(str, architecture)))
+    print("=============================\n")
+
+    # =========================
+    # CHARGEMENT DATASET
+    # =========================
     X, y_true = [], []
+
     with open(args.dataset, newline="", encoding="utf-8") as f:
         reader = csv.reader(f)
         next(reader)
@@ -30,25 +48,36 @@ def main():
             y_true.append(int(row[0]))
             X.append([float(v) for v in row[1:]])
 
-    X = (np.array(X) - mean) / std
+    X = np.array(X)
     y_true = np.array(y_true)
 
-    correct = 0
-    bce_sum = 0
-    mse_sum = 0
+    # Normalisation IDENTIQUE au training
+    X = (X - mean) / std
 
-    print("\n=== PRÉDICTIONS ===")
+    # =========================
+    # PRÉDICTIONS
+    # =========================
+    correct = 0
+    bce_sum = 0.0
+    mse_sum = 0.0
+
+    print("=== PRÉDICTIONS ===")
 
     for i in range(len(X)):
-        probs = mlp.forward(X[i:i+1]).flatten()
+        probs = mlp.forward(X[i:i + 1]).flatten()
+
         y_pred = int(np.argmax(probs))
         p1 = probs[1]
 
+        # métriques (silencieuses par ligne)
         bce_sum += binary_cross_entropy(y_true[i], p1)
         mse_sum += mean_squared_error(y_true[i], p1)
 
-        status = "OK" if y_pred == y_true[i] else "KO"
-        correct += (status == "OK")
+        if y_pred == y_true[i]:
+            correct += 1
+            status = "OK"
+        else:
+            status = "KO"
 
         print(
             f"Ligne {i+1:3d} | "
@@ -58,10 +87,16 @@ def main():
             f"{status}"
         )
 
+    n = len(X)
+
+    # =========================
+    # RÉSULTATS GLOBAUX
+    # =========================
     print("\n===================")
-    print(f"Accuracy : {correct / len(X) * 100:.2f}%")
-    print(f"Mean BCE : {bce_sum / len(X):.4f}")
-    print(f"Mean MSE : {mse_sum / len(X):.4f}")
+    print(f"Tumeurs bien classées : {correct} / {n}")
+    print(f"Accuracy : {correct / n * 100:.2f}%")
+    print(f"Mean Binary Cross-Entropy : {bce_sum / n:.4f}")
+    print(f"Mean Squared Error       : {mse_sum / n:.4f}")
 
 
 if __name__ == "__main__":

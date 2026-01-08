@@ -1,14 +1,9 @@
-"""
-mlp.py
-
-Bibliothèque interne du projet :
-- DenseLayer
-- MLP
-- Forward / Backward
-"""
-
 import numpy as np
-from ml_math import relu, relu_derivative, softmax
+from ml_math import (
+    sigmoid, sigmoid_derivative,
+    relu, relu_derivative,
+    softmax
+)
 
 
 class DenseLayer:
@@ -18,6 +13,8 @@ class DenseLayer:
         # Initialisation adaptée
         if activation == "relu":
             self.weights = np.random.randn(input_size, output_size) * np.sqrt(2 / input_size)
+        elif activation == "sigmoid":
+            self.weights = np.random.randn(input_size, output_size) * 0.01
         else:  # softmax
             self.weights = np.random.randn(input_size, output_size) * np.sqrt(1 / input_size)
 
@@ -29,7 +26,9 @@ class DenseLayer:
 
         if self.activation == "relu":
             self.output = relu(self.z)
-        else:
+        elif self.activation == "sigmoid":
+            self.output = sigmoid(self.z)
+        else:  # softmax
             self.output = softmax(self.z)
 
         return self.output
@@ -37,6 +36,8 @@ class DenseLayer:
     def backward(self, d_output, lr):
         if self.activation == "relu":
             d_z = d_output * relu_derivative(self.z)
+        elif self.activation == "sigmoid":
+            d_z = d_output * sigmoid_derivative(self.z)
         else:
             # softmax + cross-entropy
             d_z = d_output
@@ -75,25 +76,26 @@ class MLP:
     def save(self, filename, mean, std):
         model = {
             "architecture": self.architecture,
-            "weights": [l.weights for l in self.layers],
-            "biases": [l.bias for l in self.layers],
+            "activations": [layer.activation for layer in self.layers],
+            "weights": [layer.weights for layer in self.layers],
+            "biases": [layer.bias for layer in self.layers],
             "mean": mean,
             "std": std
         }
         np.save(filename, model, allow_pickle=True)
 
+
     @staticmethod
     def load(filename):
         model = np.load(filename, allow_pickle=True).item()
 
-        activations = ["relu"] * (len(model["architecture"]) - 2) + ["softmax"]
         layers_config = []
 
         for i in range(len(model["architecture"]) - 1):
             layers_config.append((
                 model["architecture"][i],
                 model["architecture"][i + 1],
-                activations[i]
+                model["activations"][i]
             ))
 
         mlp = MLP(layers_config)
@@ -103,3 +105,4 @@ class MLP:
             layer.bias = b
 
         return mlp, model["mean"], model["std"], model["architecture"]
+

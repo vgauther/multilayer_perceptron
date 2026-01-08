@@ -27,3 +27,11 @@ def binary_cross_entropy(y, p):
 
 def mean_squared_error(y, p):
     return (y - p) ** 2
+
+def sigmoid(z):
+    return 1 / (1 + np.exp(-z))
+
+
+def sigmoid_derivative(z):
+    s = sigmoid(z)
+    return s * (1 - s)
